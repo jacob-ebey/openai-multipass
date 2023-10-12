@@ -1,3 +1,5 @@
+// Test multipass prompts taken from https://github.com/raidendotai/openv0/tree/main/server/modules/multipass/passes
+
 import { multipassFactory } from "../src/index.js";
 
 export const model = multipassFactory({ debug: true })
