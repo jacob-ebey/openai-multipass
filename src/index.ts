@@ -16,7 +16,8 @@ interface Completion {
 
 export interface PassFuncArgs<I> {
   input: I;
-  complete: (args: CompleteArgs) => Promise<Completion>;
+  complete(args: CompleteArgs): Promise<Completion>;
+  embed(text: string): Promise<Array<number[]>>;
 }
 
 export type PassFunction<I, R> = (args: PassFuncArgs<I>) => R;
@@ -47,12 +48,13 @@ export function multipassFactory({
     },
     build(openai: OpenAI) {
       const complete = createComplete(openai);
+      const embed = createEmbed(openai);
       return (async ({ input }: MultipassArgs<unknown>) => {
         for (const pass of passes) {
           if (debug) {
             console.debug(`[MULTIPASS] running pass ${pass.name}`);
           }
-          input = await pass.func({ input, complete });
+          input = await pass.func({ input, complete, embed });
         }
 
         return input;
@@ -85,5 +87,18 @@ function createComplete(
       functionCall: functionCall ? JSON.parse(functionCall) : undefined,
       content: content ? content : undefined,
     };
+  };
+}
+
+function createEmbed(
+  openai: OpenAI
+): (text: string) => Promise<Array<number[]>> {
+  return async (text) => {
+    const response = await openai.embeddings.create({
+      model: "text-embedding-ada-002",
+      input: text,
+    });
+
+    return response.data.map((d) => d.embedding);
   };
 }
